@@ -6,8 +6,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -15,10 +17,13 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 
 @IFMLLoadingPlugin.MCVersion(value = "1.8.9")
@@ -29,12 +34,44 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
         super();
 
         try {
+            // This SHOULD work, but in some cases, we need to manually run keytool and restart.
             SSLStore sslStore = new SSLStore();
+            System.out.println("Attempting to load Polyfrost certificate.");
             sslStore = sslStore.load("/ssl/polyfrost.der");
-            sslStore.finish();
+            SSLContext context = sslStore.finish();
+            SSLContext.setDefault(context);
+            HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
+
+            String ver = System.getProperty("java.runtime.version", "unknown");
+            String javaLoc = System.getProperty("java.home");
+
+            if (ver.contains("1.8.0_51") || javaLoc.contains("jre-legacy")) {
+                Path keyStoreLoc = Paths.get("./OneConfig/keystore/polyfrost.jks");
+                File keyStoreFile = keyStoreLoc.toFile();
+
+                if (!keyStoreFile.exists()) {
+                    System.out.println("Attempting to run keytool.");
+                    Files.createDirectories(keyStoreLoc.getParent());
+
+                    try (InputStream in = OneConfigWrapper.class.getResourceAsStream("/ssl/polyfrost.jks"); OutputStream os = Files.newOutputStream(keyStoreLoc)) {
+                        IOUtils.copy(in, os);
+                    }
+
+                    String os = System.getProperty("os.name", "unknown");
+                    String keyStorePath = javaLoc + File.separator + "lib" + File.separator + "security" + File.separator + "cacerts";
+                    String keyToolPath = javaLoc + File.separator + "bin" + File.separator + (os.toLowerCase(Locale.ENGLISH).startsWith("windows") ? "keytool.exe" : "keytool");
+                    File log = new File("./OneConfig/keystore/keystore-" + System.currentTimeMillis() + ".log");
+
+                    new ProcessBuilder()
+                            .command(keyToolPath, "-importkeystore", "-srckeystore", keyStoreFile.getAbsolutePath(), "-destkeystore", keyStorePath, "-srckeystorepass", "polyfrost", "-destkeystorepass", "polyfrost", "-noprompt")
+                            .redirectOutput(log)
+                            .redirectError(log)
+                            .start().waitFor();
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Failed to add polyfrost certificate to keystore.");
+            System.out.println("Failed to add Polyfrost certificate to keystore.");
         }
 
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
