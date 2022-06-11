@@ -6,7 +6,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
-import org.apache.commons.io.IOUtils;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -17,13 +16,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Map;
 
 @IFMLLoadingPlugin.MCVersion(value = "1.8.9")
