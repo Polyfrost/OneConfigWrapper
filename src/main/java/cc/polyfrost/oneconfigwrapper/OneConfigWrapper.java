@@ -34,41 +34,12 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
         super();
 
         try {
-            // This SHOULD work, but in some cases, we need to manually run keytool and restart.
             SSLStore sslStore = new SSLStore();
             System.out.println("Attempting to load Polyfrost certificate.");
             sslStore = sslStore.load("/ssl/polyfrost.der");
             SSLContext context = sslStore.finish();
             SSLContext.setDefault(context);
             HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
-
-            String ver = System.getProperty("java.runtime.version", "unknown");
-            String javaLoc = System.getProperty("java.home");
-
-            if (ver.contains("1.8.0_51") || javaLoc.contains("jre-legacy")) {
-                Path keyStoreLoc = Paths.get("./OneConfig/keystore/polyfrost.jks");
-                File keyStoreFile = keyStoreLoc.toFile();
-
-                if (!keyStoreFile.exists()) {
-                    System.out.println("Attempting to run keytool.");
-                    Files.createDirectories(keyStoreLoc.getParent());
-
-                    try (InputStream in = OneConfigWrapper.class.getResourceAsStream("/ssl/polyfrost.jks"); OutputStream os = Files.newOutputStream(keyStoreLoc)) {
-                        IOUtils.copy(in, os);
-                    }
-
-                    String os = System.getProperty("os.name", "unknown");
-                    String keyStorePath = javaLoc + File.separator + "lib" + File.separator + "security" + File.separator + "cacerts";
-                    String keyToolPath = javaLoc + File.separator + "bin" + File.separator + (os.toLowerCase(Locale.ENGLISH).startsWith("windows") ? "keytool.exe" : "keytool");
-                    File log = new File("./OneConfig/keystore/keystore-" + System.currentTimeMillis() + ".log");
-
-                    new ProcessBuilder()
-                            .command(keyToolPath, "-importkeystore", "-srckeystore", keyStoreFile.getAbsolutePath(), "-destkeystore", keyStorePath, "-srckeystorepass", "polyfrost", "-destkeystorepass", "polyfrost", "-noprompt")
-                            .redirectOutput(log)
-                            .redirectError(log)
-                            .start().waitFor();
-                }
-            }
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Failed to add Polyfrost certificate to keystore.");
