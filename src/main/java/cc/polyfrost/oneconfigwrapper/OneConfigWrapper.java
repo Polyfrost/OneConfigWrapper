@@ -81,18 +81,22 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
             addToClasspath(oneConfigLoaderFile);
         }
         try {
-            CodeSource codeSource = this.getClass().getProtectionDomain().getCodeSource();
-            if (codeSource != null) {
-                URL location = codeSource.getLocation();
-                try {
-                    File file = new File(location.toURI());
-                    if (file.isFile()) {
-                        Launch.blackboard.put("oneconfig.wrapper.modFile", file);
-                    }
-                } catch (URISyntaxException ignored) {}
-            } else {
-                LogManager.getLogger().warn("No CodeSource, if this is not a development environment we might run into problems!");
-                LogManager.getLogger().warn(this.getClass().getProtectionDomain());
+            try {
+                CodeSource codeSource = this.getClass().getProtectionDomain().getCodeSource();
+                if (codeSource != null) {
+                    URL location = codeSource.getLocation();
+                    try {
+                        File file = new File(location.toURI());
+                        if (file.isFile()) {
+                            Launch.blackboard.put("oneconfig.wrapper.modFile", file);
+                        }
+                    } catch (URISyntaxException ignored) {}
+                } else {
+                    LogManager.getLogger().warn("No CodeSource, if this is not a development environment we might run into problems!");
+                    LogManager.getLogger().warn(this.getClass().getProtectionDomain());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             loader = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfigloader.OneConfigLoader").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
